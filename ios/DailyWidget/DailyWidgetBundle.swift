@@ -1,6 +1,8 @@
 //
 //  DailyWidgetBundle.swift
-//  DailyWidget Extension
+//  DailyWidget
+//
+//  Created by İlkan Kişi on 26.01.2026.
 //
 
 import WidgetKit
@@ -12,5 +14,3 @@ struct DailyWidgetBundle: WidgetBundle {
         DailyWidget()
     }
 }
-
-
