@@ -85,31 +85,25 @@ struct DailyWidgetEntryView: View {
                 .font(.subheadline)
                 .foregroundColor(Color(red: 0.878, green: 0.878, blue: 0.878)) // #E0E0E0
                 .lineLimit(4)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 8)
             
-            Spacer()
+            Spacer(minLength: 0)
             
             if let updatedAt = entry.updatedAt {
-                Text(formatDate(updatedAt))
-                    .font(.caption2)
-                    .foregroundColor(Color(red: 0.69, green: 0.69, blue: 0.69)) // #B0B0B0
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .padding(.top, 8)
+                HStack {
+                    Spacer()
+                    Text(formatDate(updatedAt))
+                        .font(.caption2)
+                        .foregroundColor(Color(red: 0.69, green: 0.69, blue: 0.69)) // #B0B0B0
+                }
+                .padding(.top, 8)
             }
         }
         .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.38, green: 0.0, blue: 0.93), // #6200EE
-                    Color(red: 0.38, green: 0.0, blue: 0.93)  // #6200EE (solid color effect)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .containerBackground(for: .widget) {
+            Color(red: 0.38, green: 0.0, blue: 0.93) // #6200EE
+        }
     }
     
     private func formatDate(_ isoString: String) -> String {

@@ -1,19 +1,76 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:home_widget/home_widget.dart';
 import 'services/firebase_service.dart';
 
+// #region agent log
+void debugLog(String message, {Map<String, dynamic> data = const {}, String hypothesisId = ''}) {
+  final logPath = '/Applications/periodically_notification/.cursor/debug.log';
+  final logEntry = {
+    'sessionId': 'debug-session',
+    'runId': 'run1',
+    'hypothesisId': hypothesisId,
+    'location': 'main.dart',
+    'message': message,
+    'data': data,
+    'timestamp': DateTime.now().millisecondsSinceEpoch,
+  };
+  try {
+    final file = File(logPath);
+    final jsonString = '{"sessionId":"debug-session","runId":"run1","hypothesisId":"$hypothesisId","location":"main.dart","message":"${message.replaceAll('"', '\\"')}","data":${_mapToJson(data)},"timestamp":${DateTime.now().millisecondsSinceEpoch}}\n';
+    file.writeAsStringSync(jsonString, mode: FileMode.append);
+  } catch (e) {
+    print('DEBUG_LOG_ERROR: $e | $message | $data');
+  }
+}
+
+String _mapToJson(Map<String, dynamic> map) {
+  final entries = map.entries.map((e) => '"${e.key}":"${e.value.toString().replaceAll('"', '\\"')}"');
+  return '{${entries.join(",")}}';
+}
+// #endregion
+
 void main() async {
+  // #region agent log
+  debugLog('main() START', hypothesisId: 'H2,H5');
+  // #endregion
+  
   WidgetsFlutterBinding.ensureInitialized();
   
+  // #region agent log
+  debugLog('After WidgetsFlutterBinding.ensureInitialized', hypothesisId: 'H2');
+  // #endregion
+  
   // Initialize Firebase
+  // #region agent log
+  debugLog('Before Firebase.initializeApp', hypothesisId: 'H2');
+  // #endregion
   await Firebase.initializeApp();
   
+  // #region agent log
+  debugLog('After Firebase.initializeApp', hypothesisId: 'H2');
+  // #endregion
+  
   // Initialize Firebase Service (FCM, topic subscription)
+  // #region agent log
+  debugLog('Before FirebaseService().initialize', hypothesisId: 'H2');
+  // #endregion
   await FirebaseService().initialize();
   
+  // #region agent log
+  debugLog('After FirebaseService().initialize', hypothesisId: 'H2');
+  // #endregion
+  
+  // #region agent log
+  debugLog('Before runApp', hypothesisId: 'H2,H5');
+  // #endregion
   runApp(const MyApp());
+  
+  // #region agent log
+  debugLog('After runApp', hypothesisId: 'H2,H5');
+  // #endregion
 }
 
 class MyApp extends StatelessWidget {
@@ -21,6 +78,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // #region agent log
+    debugLog('MyApp.build() called', hypothesisId: 'H5');
+    // #endregion
     return MaterialApp(
       title: 'Periodically Notification',
       theme: ThemeData(
@@ -46,6 +106,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    // #region agent log
+    debugLog('HomePage.initState() called', hypothesisId: 'H5');
+    // #endregion
     _loadWidgetStatus();
   }
 
