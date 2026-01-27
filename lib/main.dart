@@ -1,76 +1,19 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:home_widget/home_widget.dart';
 import 'services/firebase_service.dart';
 
-// #region agent log
-void debugLog(String message, {Map<String, dynamic> data = const {}, String hypothesisId = ''}) {
-  final logPath = '/Applications/periodically_notification/.cursor/debug.log';
-  final logEntry = {
-    'sessionId': 'debug-session',
-    'runId': 'run1',
-    'hypothesisId': hypothesisId,
-    'location': 'main.dart',
-    'message': message,
-    'data': data,
-    'timestamp': DateTime.now().millisecondsSinceEpoch,
-  };
-  try {
-    final file = File(logPath);
-    final jsonString = '{"sessionId":"debug-session","runId":"run1","hypothesisId":"$hypothesisId","location":"main.dart","message":"${message.replaceAll('"', '\\"')}","data":${_mapToJson(data)},"timestamp":${DateTime.now().millisecondsSinceEpoch}}\n';
-    file.writeAsStringSync(jsonString, mode: FileMode.append);
-  } catch (e) {
-    print('DEBUG_LOG_ERROR: $e | $message | $data');
-  }
-}
-
-String _mapToJson(Map<String, dynamic> map) {
-  final entries = map.entries.map((e) => '"${e.key}":"${e.value.toString().replaceAll('"', '\\"')}"');
-  return '{${entries.join(",")}}';
-}
-// #endregion
-
 void main() async {
-  // #region agent log
-  debugLog('main() START', hypothesisId: 'H2,H5');
-  // #endregion
-  
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // #region agent log
-  debugLog('After WidgetsFlutterBinding.ensureInitialized', hypothesisId: 'H2');
-  // #endregion
-  
+
   // Initialize Firebase
-  // #region agent log
-  debugLog('Before Firebase.initializeApp', hypothesisId: 'H2');
-  // #endregion
   await Firebase.initializeApp();
-  
-  // #region agent log
-  debugLog('After Firebase.initializeApp', hypothesisId: 'H2');
-  // #endregion
-  
+
   // Initialize Firebase Service (FCM, topic subscription)
-  // #region agent log
-  debugLog('Before FirebaseService().initialize', hypothesisId: 'H2');
-  // #endregion
   await FirebaseService().initialize();
-  
-  // #region agent log
-  debugLog('After FirebaseService().initialize', hypothesisId: 'H2');
-  // #endregion
-  
-  // #region agent log
-  debugLog('Before runApp', hypothesisId: 'H2,H5');
-  // #endregion
+
   runApp(const MyApp());
-  
-  // #region agent log
-  debugLog('After runApp', hypothesisId: 'H2,H5');
-  // #endregion
 }
 
 class MyApp extends StatelessWidget {
@@ -78,16 +21,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // #region agent log
-    debugLog('MyApp.build() called', hypothesisId: 'H5');
-    // #endregion
-    return MaterialApp(
-      title: 'Periodically Notification',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+    return Scaffold(
+      body: MaterialApp(
+        title: 'Periodically Notification',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          useMaterial3: true,
+        ),
+        home: const HomePage(),
       ),
-      home: const HomePage(),
     );
   }
 }
@@ -106,18 +48,21 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // #region agent log
-    debugLog('HomePage.initState() called', hypothesisId: 'H5');
-    // #endregion
     _loadWidgetStatus();
   }
 
   Future<void> _loadWidgetStatus() async {
     try {
       // Check if widget has data
-      final title = await HomeWidget.getWidgetData<String>('widget_title', defaultValue: '');
-      final updatedAt = await HomeWidget.getWidgetData<String>('widget_updatedAt', defaultValue: '');
-      
+      final title = await HomeWidget.getWidgetData<String>(
+        'widget_title',
+        defaultValue: '',
+      );
+      final updatedAt = await HomeWidget.getWidgetData<String>(
+        'widget_updatedAt',
+        defaultValue: '',
+      );
+
       setState(() {
         if (title != null && title.isNotEmpty) {
           _status = 'Widget is active';
@@ -147,53 +92,53 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-              const Icon(
-                Icons.notifications_active,
-                size: 64,
-                color: Colors.deepPurple,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                _status,
-                style: Theme.of(context).textTheme.headlineSmall,
-                textAlign: TextAlign.center,
-              ),
-              if (_lastUpdate != null) ...[
-                const SizedBox(height: 16),
+                const Icon(
+                  Icons.notifications_active,
+                  size: 64,
+                  color: Colors.deepPurple,
+                ),
+                const SizedBox(height: 24),
                 Text(
-                  'Last update: ${_formatDate(_lastUpdate!)}',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  _status,
+                  style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
-              ],
-              const SizedBox(height: 32),
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                alignment: WrapAlignment.center,
-                children: [
-                  ElevatedButton(
-                    onPressed: _loadWidgetStatus,
-                    child: const Text('Refresh Status'),
-                  ),
-                  ElevatedButton(
-                    onPressed: _testManualSend,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Test Send'),
-                  ),
-                  ElevatedButton(
-                    onPressed: _testWidgetData,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Test Widget'),
+                if (_lastUpdate != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Last update: ${_formatDate(_lastUpdate!)}',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
                   ),
                 ],
-              ),
+                const SizedBox(height: 32),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: _loadWidgetStatus,
+                      child: const Text('Refresh Status'),
+                    ),
+                    ElevatedButton(
+                      onPressed: _testManualSend,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Test Send'),
+                    ),
+                    ElevatedButton(
+                      onPressed: _testWidgetData,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Test Widget'),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -211,9 +156,9 @@ class _HomePageState extends State<HomePage> {
       print('=== TEST MANUAL SEND START ===');
       print('Region: us-central1');
       print('Function: manualSendDailyContent');
-      
+
       final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-      
+
       print('Calling function...');
       // Add timeout
       final result = await functions
@@ -223,10 +168,12 @@ class _HomePageState extends State<HomePage> {
             const Duration(seconds: 60), // Increased timeout
             onTimeout: () {
               print('=== TIMEOUT ERROR ===');
-              throw Exception('Request timeout after 60 seconds. Check:\n'
-                  '1. Internet connection\n'
-                  '2. Cloud Function is deployed: firebase deploy --only functions\n'
-                  '3. Function region matches (us-central1)');
+              throw Exception(
+                'Request timeout after 60 seconds. Check:\n'
+                '1. Internet connection\n'
+                '2. Cloud Function is deployed: firebase deploy --only functions\n'
+                '3. Function region matches (us-central1)',
+              );
             },
           );
 
@@ -234,7 +181,8 @@ class _HomePageState extends State<HomePage> {
       print('Result: ${result.data}');
 
       setState(() {
-        _status = 'Test sent successfully! Message ID: ${result.data['messageId'] ?? 'N/A'}';
+        _status =
+            'Test sent successfully! Message ID: ${result.data['messageId'] ?? 'N/A'}';
       });
 
       // Refresh widget status after a delay
@@ -256,23 +204,27 @@ class _HomePageState extends State<HomePage> {
       print('Error: $e');
       print('Stack trace: $stackTrace');
       print('==============================');
-      
+
       String errorMessage = 'Error: $e';
-      
+
       // More user-friendly error messages
       if (e.toString().contains('UNAVAILABLE')) {
-        errorMessage = 'Cloud Functions unavailable. Check:\n'
+        errorMessage =
+            'Cloud Functions unavailable. Check:\n'
             '1. Internet connection\n'
             '2. Firebase project settings\n'
             '3. Function deployment: firebase deploy --only functions';
       } else if (e.toString().contains('timeout')) {
-        errorMessage = 'Request timeout. Check:\n'
+        errorMessage =
+            'Request timeout. Check:\n'
             '1. Internet connection\n'
             '2. Cloud Function is deployed\n'
             '3. Function region matches (us-central1)';
-      } else if (e.toString().contains('NOT_FOUND') || e.toString().contains('not-found')) {
+      } else if (e.toString().contains('NOT_FOUND') ||
+          e.toString().contains('not-found')) {
         if (e.toString().contains('No unsent item found')) {
-          errorMessage = 'No content available to send.\n\n'
+          errorMessage =
+              'No content available to send.\n\n'
               'Add items to Firestore:\n'
               '1. Go to Firebase Console > Firestore\n'
               '2. Add document to daily_items collection:\n'
@@ -283,11 +235,12 @@ class _HomePageState extends State<HomePage> {
               '3. Update daily_state/current:\n'
               '   - nextOrder: (same as order)';
         } else {
-          errorMessage = 'Function not found. Deploy it:\n'
+          errorMessage =
+              'Function not found. Deploy it:\n'
               'firebase deploy --only functions';
         }
       }
-      
+
       setState(() {
         _status = errorMessage;
       });
@@ -307,13 +260,10 @@ class _HomePageState extends State<HomePage> {
   Future<void> _testWidgetData() async {
     try {
       print('=== TEST WIDGET DATA START ===');
-      
+
       // Test: Manually save widget data
       print('Saving widget_title...');
-      await HomeWidget.saveWidgetData<String>(
-        'widget_title',
-        'Test Başlık',
-      );
+      await HomeWidget.saveWidgetData<String>('widget_title', 'Test Başlık');
       print('✓ widget_title saved');
 
       print('Saving widget_body...');
@@ -332,10 +282,19 @@ class _HomePageState extends State<HomePage> {
 
       // Verify data was saved by reading it back from SharedPreferences
       print('=== VERIFYING SAVED DATA ===');
-      final savedTitle = await HomeWidget.getWidgetData<String>('widget_title', defaultValue: '');
-      final savedBody = await HomeWidget.getWidgetData<String>('widget_body', defaultValue: '');
-      final savedUpdatedAt = await HomeWidget.getWidgetData<String>('widget_updatedAt', defaultValue: '');
-      
+      final savedTitle = await HomeWidget.getWidgetData<String>(
+        'widget_title',
+        defaultValue: '',
+      );
+      final savedBody = await HomeWidget.getWidgetData<String>(
+        'widget_body',
+        defaultValue: '',
+      );
+      final savedUpdatedAt = await HomeWidget.getWidgetData<String>(
+        'widget_updatedAt',
+        defaultValue: '',
+      );
+
       print('✅ Verified widget_title in storage: $savedTitle');
       print('✅ Verified widget_body in storage: $savedBody');
       print('✅ Verified widget_updatedAt in storage: $savedUpdatedAt');
@@ -343,12 +302,15 @@ class _HomePageState extends State<HomePage> {
 
       // Update widget
       print('Updating widget...');
-      print('Using qualifiedAndroidName: com.example.periodicallynotification.widget.DailyWidgetProvider');
+      print(
+        'Using qualifiedAndroidName: com.example.periodicallynotification.widget.DailyWidgetProvider',
+      );
       await HomeWidget.updateWidget(
         name: 'DailyWidget',
         iOSName: 'DailyWidget',
         androidName: 'DailyWidgetProvider',
-        qualifiedAndroidName: 'com.example.periodicallynotification.widget.DailyWidgetProvider',
+        qualifiedAndroidName:
+            'com.example.periodicallynotification.widget.DailyWidgetProvider',
       );
       print('✓ Widget update called');
 
@@ -361,7 +323,9 @@ class _HomePageState extends State<HomePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Widget verisi kaydedildi! Ana ekrana widget ekleyin.'),
+            content: Text(
+              'Widget verisi kaydedildi! Ana ekrana widget ekleyin.',
+            ),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 3),
           ),
@@ -377,11 +341,11 @@ class _HomePageState extends State<HomePage> {
       print('Error: $e');
       print('Stack trace: $stackTrace');
       print('==============================');
-      
+
       setState(() {
         _status = 'Widget test error: $e';
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
