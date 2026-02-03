@@ -1,455 +1,203 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:home_widget/home_widget.dart';
 import 'services/firebase_service.dart';
+import 'package:home_widget/home_widget.dart';
 
-void main() {
+void appLog(String message) {
+  print('[APP-DART] $message');
+}
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyAppWithInit());
+  appLog('main() başladı');
+  try {
+    appLog('Firebase initialize başlanıyor...');
+    await Firebase.initializeApp();
+    appLog('Firebase initialize tamamlandı');
+    
+    await FirebaseService.initialize();
+    appLog('FirebaseService setup tamamlandı');
+    
+    runApp(const MyApp());
+    appLog('runApp() tamamlandı');
+  } catch (e, st) {
+    appLog('ERROR runApp: $e');
+    appLog('Stack: $st');
+  }
 }
 
-class MyAppWithInit extends StatefulWidget {
-  const MyAppWithInit({super.key});
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
 
   @override
-  State<MyAppWithInit> createState() => _MyAppWithInitState();
+  State<MyApp> createState() {
+    appLog('MyApp.createState() çağrıldı');
+    return _MyAppState();
+  }
 }
 
-class _MyAppWithInitState extends State<MyAppWithInit> {
-  late Future<void> _initFuture;
+class _MyAppState extends State<MyApp> {
+  String widgetTitle = 'Günün İçeriği';
+  String widgetBody = 'Yükleniyor...';
+  String widgetUpdatedAt = '';
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _initFuture = _initialize();
+    appLog('_MyAppState.initState() çağrıldı');
+    _loadWidgetData();
   }
 
-  Future<void> _initialize() async {
+  Future<void> _loadWidgetData() async {
+    appLog('Widget data yükleniyor...');
     try {
-      print('🔄 Starting Firebase init...');
-      await Firebase.initializeApp();
-      print('✅ Firebase initialized');
+      final title = await HomeWidget.getWidgetData<String>('widget_title', defaultValue: 'Günün İçeriği');
+      final body = await HomeWidget.getWidgetData<String>('widget_body', defaultValue: 'Veri bekleniyor...');
+      final updatedAt = await HomeWidget.getWidgetData<String>('widget_updatedAt', defaultValue: '');
       
-      print('🔄 Starting FirebaseService init...');
-      await FirebaseService().initialize();
-      print('✅ FirebaseService initialized');
+      appLog('Widget title: $title');
+      appLog('Widget body: $body');
+      appLog('Widget updatedAt: $updatedAt');
       
-      // TEMP: Artificial delay to see loading screen
-      await Future.delayed(const Duration(seconds: 2));
-      print('✅ Init complete!');
+      setState(() {
+        widgetTitle = title ?? 'Günün İçeriği';
+        widgetBody = body ?? 'Veri bekleniyor...';
+        widgetUpdatedAt = updatedAt ?? '';
+        isLoading = false;
+      });
+      appLog('Widget verileri setState ile güncellendi');
     } catch (e) {
-      print('❌ Init error: $e');
-      print('❌ Init error: $e');
-      rethrow;
+      appLog('ERROR Widget data yükleme: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _sendTestNotification() async {
+    appLog('Test notification gönderiliyor...');
+    try {
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('manualSendDailyContent')
+          .call();
+      
+      appLog('✅ Test notification gönderildi: ${result.data}');
+      
+      // Veriyi yenile
+      await Future.delayed(const Duration(seconds: 1));
+      _loadWidgetData();
+    } catch (e) {
+      appLog('❌ Test notification hatası: $e');
     }
   }
 
   @override
+  void didChangeDependencies() {
+    appLog('_MyAppState.didChangeDependencies() çağrıldı');
+    super.didChangeDependencies();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return FutureBuilder<void>(
-      future: _initFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          // show immediate loading UI while initializing
-          return MaterialApp(
-            home: Scaffold(
-              backgroundColor: Colors.white,
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Initializing Firebase...'),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-
-        if (snapshot.hasError) {
-          // show a simple error screen
-          return MaterialApp(
-            title: 'Error',
-            home: Scaffold(
-              backgroundColor: Colors.white,
-              body: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    'Initialization error:\n${snapshot.error}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.red, fontSize: 16),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
-
-        // Initialization succeeded — show test screen
-        return MaterialApp(
-          title: 'Periodically Notification',
-          home: Scaffold(
-            appBar: AppBar(
-              title: const Text('App Ready'),
-              backgroundColor: Colors.green,
-            ),
-            body: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check_circle, size: 64, color: Colors.green),
-                  SizedBox(height: 16),
-                  Text('Firebase initialized successfully!'),
-                  SizedBox(height: 32),
-                  Text(
-                    'FCM configured and ready\nfor push notifications.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
+    appLog('_MyAppState.build() başladı');
+    try {
+      final app = MaterialApp(
+        title: 'Periodically Notification',
+        home: Scaffold(
+          appBar: AppBar(
+            title: const Text('Günün İçeriği'),
+            backgroundColor: Colors.blue,
           ),
-        );
-      },
-    );
-  }
-}
-
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
-
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  String _status = 'Initializing...';
-  String? _lastUpdate;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadWidgetStatus();
-  }
-
-  Future<void> _loadWidgetStatus() async {
-    try {
-      // Check if widget has data
-      final title = await HomeWidget.getWidgetData<String>(
-        'widget_title',
-        defaultValue: '',
-      );
-      final updatedAt = await HomeWidget.getWidgetData<String>(
-        'widget_updatedAt',
-        defaultValue: '',
-      );
-
-      setState(() {
-        if (title != null && title.isNotEmpty) {
-          _status = 'Widget is active';
-          _lastUpdate = updatedAt;
-        } else {
-          _status = 'Waiting for daily content...';
-        }
-      });
-    } catch (e) {
-      setState(() {
-        _status = 'Error: $e';
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Daily Widget'),
-      ),
-      body: SingleChildScrollView(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.notifications_active,
-                  size: 64,
-                  color: Colors.deepPurple,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  _status,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                  textAlign: TextAlign.center,
-                ),
-                if (_lastUpdate != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    'Last update: ${_formatDate(_lastUpdate!)}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
+          backgroundColor: Colors.white,
+          body: Center(
+            child: isLoading
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Widget verileri yükleniyor...',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ],
+                  )
+                : SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widgetTitle,
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: Text(
+                              widgetBody,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.black54,
+                                  ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          if (widgetUpdatedAt.isNotEmpty)
+                            Text(
+                              'Güncelleme: $widgetUpdatedAt',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.grey,
+                                  ),
+                            ),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: _loadWidgetData,
+                            child: const Text('Verileri Yenile'),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: _sendTestNotification,
+                            icon: const Icon(Icons.send),
+                            label: const Text('Test Notification Gönder'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ],
-                const SizedBox(height: 32),
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    ElevatedButton(
-                      onPressed: _loadWidgetStatus,
-                      child: const Text('Refresh Status'),
-                    ),
-                    ElevatedButton(
-                      onPressed: _testManualSend,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Test Send'),
-                    ),
-                    ElevatedButton(
-                      onPressed: _testWidgetData,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Test Widget'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
           ),
         ),
-      ),
-    );
-  }
-
-  Future<void> _testManualSend() async {
-    try {
-      setState(() {
-        _status = 'Sending test notification...';
-      });
-
-      print('=== TEST MANUAL SEND START ===');
-      print('Region: us-central1');
-      print('Function: manualSendDailyContent');
-
-      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-
-      print('Calling function...');
-      // Add timeout
-      final result = await functions
-          .httpsCallable('manualSendDailyContent')
-          .call()
-          .timeout(
-            const Duration(seconds: 60), // Increased timeout
-            onTimeout: () {
-              print('=== TIMEOUT ERROR ===');
-              throw Exception(
-                'Request timeout after 60 seconds. Check:\n'
-                '1. Internet connection\n'
-                '2. Cloud Function is deployed: firebase deploy --only functions\n'
-                '3. Function region matches (us-central1)',
-              );
-            },
-          );
-
-      print('=== FUNCTION CALL SUCCESS ===');
-      print('Result: ${result.data}');
-
-      setState(() {
-        _status =
-            'Test sent successfully! Message ID: ${result.data['messageId'] ?? 'N/A'}';
-      });
-
-      // Refresh widget status after a delay
-      Future.delayed(const Duration(seconds: 2), () {
-        _loadWidgetStatus();
-      });
-
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Success: ${result.data}'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e, stackTrace) {
-      print('=== TEST MANUAL SEND ERROR ===');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
-      print('==============================');
-
-      String errorMessage = 'Error: $e';
-
-      // More user-friendly error messages
-      if (e.toString().contains('UNAVAILABLE')) {
-        errorMessage =
-            'Cloud Functions unavailable. Check:\n'
-            '1. Internet connection\n'
-            '2. Firebase project settings\n'
-            '3. Function deployment: firebase deploy --only functions';
-      } else if (e.toString().contains('timeout')) {
-        errorMessage =
-            'Request timeout. Check:\n'
-            '1. Internet connection\n'
-            '2. Cloud Function is deployed\n'
-            '3. Function region matches (us-central1)';
-      } else if (e.toString().contains('NOT_FOUND') ||
-          e.toString().contains('not-found')) {
-        if (e.toString().contains('No unsent item found')) {
-          errorMessage =
-              'No content available to send.\n\n'
-              'Add items to Firestore:\n'
-              '1. Go to Firebase Console > Firestore\n'
-              '2. Add document to daily_items collection:\n'
-              '   - order: (next number)\n'
-              '   - title: "Your title"\n'
-              '   - body: "Your content"\n'
-              '   - sent: false\n'
-              '3. Update daily_state/current:\n'
-              '   - nextOrder: (same as order)';
-        } else {
-          errorMessage =
-              'Function not found. Deploy it:\n'
-              'firebase deploy --only functions';
-        }
-      }
-
-      setState(() {
-        _status = errorMessage;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
+      );
+      appLog('_MyAppState.build() tamamlandı');
+      return app;
+    } catch (e, st) {
+      appLog('ERROR _MyAppState.build: $e');
+      appLog('Stack trace: $st');
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(child: Text('Error: $e')),
+        ),
+      );
     }
   }
 
-  Future<void> _testWidgetData() async {
-    try {
-      print('=== TEST WIDGET DATA START ===');
-
-      // Test: Manually save widget data
-      print('Saving widget_title...');
-      await HomeWidget.saveWidgetData<String>('widget_title', 'Test Başlık');
-      print('✓ widget_title saved');
-
-      print('Saving widget_body...');
-      await HomeWidget.saveWidgetData<String>(
-        'widget_body',
-        'Bu bir test içeriğidir. Widget\'ta görünmeli.',
-      );
-      print('✓ widget_body saved');
-
-      print('Saving widget_updatedAt...');
-      await HomeWidget.saveWidgetData<String>(
-        'widget_updatedAt',
-        DateTime.now().toIso8601String(),
-      );
-      print('✓ widget_updatedAt saved');
-
-      // Verify data was saved by reading it back from SharedPreferences
-      print('=== VERIFYING SAVED DATA ===');
-      final savedTitle = await HomeWidget.getWidgetData<String>(
-        'widget_title',
-        defaultValue: '',
-      );
-      final savedBody = await HomeWidget.getWidgetData<String>(
-        'widget_body',
-        defaultValue: '',
-      );
-      final savedUpdatedAt = await HomeWidget.getWidgetData<String>(
-        'widget_updatedAt',
-        defaultValue: '',
-      );
-
-      print('✅ Verified widget_title in storage: $savedTitle');
-      print('✅ Verified widget_body in storage: $savedBody');
-      print('✅ Verified widget_updatedAt in storage: $savedUpdatedAt');
-      print('=== VERIFICATION COMPLETE ===');
-
-      // Update widget
-      print('Updating widget...');
-      print(
-        'Using qualifiedAndroidName: com.siyazilim.periodicallynotification.widget.DailyWidgetProvider',
-      );
-      await HomeWidget.updateWidget(
-        name: 'DailyWidget',
-        iOSName: 'DailyWidget',
-        androidName: 'DailyWidgetProvider',
-        qualifiedAndroidName:
-            'com.siyazilim.periodicallynotification.widget.DailyWidgetProvider',
-      );
-      print('✓ Widget update called');
-
-      setState(() {
-        _status = 'Test data saved to widget!';
-      });
-
-      print('=== TEST WIDGET DATA SUCCESS ===');
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Widget verisi kaydedildi! Ana ekrana widget ekleyin.',
-            ),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-
-      // Refresh status
-      Future.delayed(const Duration(seconds: 1), () {
-        _loadWidgetStatus();
-      });
-    } catch (e, stackTrace) {
-      print('=== TEST WIDGET DATA ERROR ===');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
-      print('==============================');
-
-      setState(() {
-        _status = 'Widget test error: $e';
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Widget error: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-    }
-  }
-
-  String _formatDate(String isoString) {
-    try {
-      final date = DateTime.parse(isoString);
-      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-    } catch (e) {
-      return isoString;
-    }
+  @override
+  void dispose() {
+    appLog('_MyAppState.dispose() çağrıldı');
+    super.dispose();
   }
 }
