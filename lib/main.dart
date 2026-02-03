@@ -40,6 +40,7 @@ class _MyAppWithInitState extends State<MyAppWithInit> {
       print('✅ Init complete!');
     } catch (e) {
       print('❌ Init error: $e');
+      print('❌ Init error: $e');
       rethrow;
     }
   }
