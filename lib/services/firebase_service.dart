@@ -63,7 +63,7 @@ class FirebaseService {
       _setupMessageHandlers();
 
       // Initialize home_widget
-      await HomeWidget.setAppGroupId('group.com.example.periodicallynotification');
+      await HomeWidget.setAppGroupId('group.com.siyazilim.periodicallynotification');
     } catch (e) {
       print('Error initializing Firebase: $e');
     }
@@ -242,7 +242,7 @@ class FirebaseService {
         name: 'DailyWidget',
         iOSName: 'DailyWidget',
         androidName: 'DailyWidgetProvider',
-        qualifiedAndroidName: 'com.example.periodicallynotification.widget.DailyWidgetProvider',
+        qualifiedAndroidName: 'com.siyazilim.periodicallynotification.widget.DailyWidgetProvider',
       );
       print('[FCM_WIDGET] ✅ HomeWidget.updateWidget completed');
 

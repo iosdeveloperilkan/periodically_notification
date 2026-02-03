@@ -4,32 +4,117 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:home_widget/home_widget.dart';
 import 'services/firebase_service.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Firebase
-  await Firebase.initializeApp();
-
-  // Initialize Firebase Service (FCM, topic subscription)
-  await FirebaseService().initialize();
-
-  runApp(const MyApp());
+  runApp(const MyAppWithInit());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MyAppWithInit extends StatefulWidget {
+  const MyAppWithInit({super.key});
+
+  @override
+  State<MyAppWithInit> createState() => _MyAppWithInitState();
+}
+
+class _MyAppWithInitState extends State<MyAppWithInit> {
+  late Future<void> _initFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _initFuture = _initialize();
+  }
+
+  Future<void> _initialize() async {
+    try {
+      print('🔄 Starting Firebase init...');
+      await Firebase.initializeApp();
+      print('✅ Firebase initialized');
+      
+      print('🔄 Starting FirebaseService init...');
+      await FirebaseService().initialize();
+      print('✅ FirebaseService initialized');
+      
+      // TEMP: Artificial delay to see loading screen
+      await Future.delayed(const Duration(seconds: 2));
+      print('✅ Init complete!');
+    } catch (e) {
+      print('❌ Init error: $e');
+      rethrow;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: MaterialApp(
-        title: 'Periodically Notification',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-        ),
-        home: const HomePage(),
-      ),
+    return FutureBuilder<void>(
+      future: _initFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          // show immediate loading UI while initializing
+          return MaterialApp(
+            home: Scaffold(
+              backgroundColor: Colors.white,
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Initializing Firebase...'),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          // show a simple error screen
+          return MaterialApp(
+            title: 'Error',
+            home: Scaffold(
+              backgroundColor: Colors.white,
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Initialization error:\n${snapshot.error}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red, fontSize: 16),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        // Initialization succeeded — show test screen
+        return MaterialApp(
+          title: 'Periodically Notification',
+          home: Scaffold(
+            appBar: AppBar(
+              title: const Text('App Ready'),
+              backgroundColor: Colors.green,
+            ),
+            body: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.check_circle, size: 64, color: Colors.green),
+                  SizedBox(height: 16),
+                  Text('Firebase initialized successfully!'),
+                  SizedBox(height: 32),
+                  Text(
+                    'FCM configured and ready\nfor push notifications.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -303,14 +388,14 @@ class _HomePageState extends State<HomePage> {
       // Update widget
       print('Updating widget...');
       print(
-        'Using qualifiedAndroidName: com.example.periodicallynotification.widget.DailyWidgetProvider',
+        'Using qualifiedAndroidName: com.siyazilim.periodicallynotification.widget.DailyWidgetProvider',
       );
       await HomeWidget.updateWidget(
         name: 'DailyWidget',
         iOSName: 'DailyWidget',
         androidName: 'DailyWidgetProvider',
         qualifiedAndroidName:
-            'com.example.periodicallynotification.widget.DailyWidgetProvider',
+            'com.siyazilim.periodicallynotification.widget.DailyWidgetProvider',
       );
       print('✓ Widget update called');
 
