@@ -3,12 +3,14 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'services/firebase_service.dart';
 import 'package:home_widget/home_widget.dart';
+import 'screens/home_page.dart';
 
 void appLog(String message) {
   print('[APP-DART] $message');
 }
 
 void main() async {
+  
   WidgetsFlutterBinding.ensureInitialized();
   appLog('main() başladı');
   try {
@@ -103,87 +105,12 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     appLog('_MyAppState.build() başladı');
     try {
-      final app = MaterialApp(
-        title: 'Periodically Notification',
-        home: Scaffold(
-          appBar: AppBar(
-            title: const Text('Günün İçeriği'),
-            backgroundColor: Colors.blue,
-          ),
-          backgroundColor: Colors.white,
-          body: Center(
-            child: isLoading
-                ? Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 20),
-                      Text(
-                        'Widget verileri yükleniyor...',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    ],
-                  )
-                : SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widgetTitle,
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                          ),
-                          const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey[300]!),
-                            ),
-                            child: Text(
-                              widgetBody,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.black54,
-                                  ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          if (widgetUpdatedAt.isNotEmpty)
-                            Text(
-                              'Güncelleme: $widgetUpdatedAt',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey,
-                                  ),
-                            ),
-                          const SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: _loadWidgetData,
-                            child: const Text('Verileri Yenile'),
-                          ),
-                          const SizedBox(height: 12),
-                          ElevatedButton.icon(
-                            onPressed: _sendTestNotification,
-                            icon: const Icon(Icons.send),
-                            label: const Text('Test Notification Gönder'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-          ),
-        ),
-      );
       appLog('_MyAppState.build() tamamlandı');
-      return app;
+      return MaterialApp(
+        title: 'Periodically Notification',
+        debugShowCheckedModeBanner: false,
+        home: const HomePage(),
+      );
     } catch (e, st) {
       appLog('ERROR _MyAppState.build: $e');
       appLog('Stack trace: $st');
